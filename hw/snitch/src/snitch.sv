@@ -219,6 +219,8 @@ module snitch
   logic unsupported_inst;
   // Illegal instruction, unsupported by Snitch, ACC and CV-X-IF coprocessors.
   logic illegal_inst;
+  // CV-X-IF coprocessor rejected the instruction and reported an exception cause.
+  logic xif_exc;
   logic interrupt, ecall, ebreak;
   logic zero_lsb;
 
@@ -691,6 +693,7 @@ module snitch
   always_comb begin
     unsupported_inst = 1'b0;
     illegal_inst = 1'b0;
+    xif_exc = 1'b0;
     ecall = 1'b0;
     ebreak = 1'b0;
     alu_op = Add;
@@ -3110,8 +3113,13 @@ module snitch
 
         // Unsupported instructions that are not accepted by any coprocessor are flagged as
         // illegal. We currently assume that the coprocessor will accept the instruction in the
-        // same cycle as the issue handshake.
-        illegal_inst = x_issue_ready_i & x_issue_valid_o & ~x_issue_resp_i.accept;
+        // same cycle as the issue handshake. A rejecting coprocessor may instead report an
+        // exception with its own cause (exc / exccode), which then replaces the illegal
+        // instruction exception (mtval stays 0).
+        illegal_inst = x_issue_ready_i & x_issue_valid_o & ~x_issue_resp_i.accept
+                     & ~x_issue_resp_i.exc;
+        xif_exc      = x_issue_ready_i & x_issue_valid_o & ~x_issue_resp_i.accept
+                     & x_issue_resp_i.exc;
       end else begin
         illegal_inst = 1'b1;
       end
@@ -3126,6 +3134,7 @@ module snitch
   end
 
   assign exception = illegal_inst
+                   | xif_exc
                    | ecall
                    | ebreak
                    | interrupt
@@ -3461,6 +3470,8 @@ module snitch
       // Exceptions
       // Illegal Instructions.
       if (illegal_inst || illegal_csr) cause_d[M] = IllegalInstr;
+      // Exception reported by a CV-X-IF coprocessor at issue.
+      if (xif_exc) cause_d[M] = x_issue_resp_i.exccode[4:0];
       // Environment Calls.
       if (ecall) begin
         unique case (priv_lvl_q)

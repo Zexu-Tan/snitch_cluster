@@ -14,11 +14,17 @@
     logic [``__xif_id_width``-1:0] id;           \
   }
 
+// exc / exccode: a coprocessor that rejects an instruction (accept = 0) can report a synchronous
+// exception with this cause instead of an illegal instruction. Extension of the issue response
+// for coprocessors without a memory interface (Cassia: address-misaligned / access-fault of its
+// loads and stores, checked at issue). exc = 0 keeps the standard behaviour (illegal instruction).
 `define CV_X_IF_ISSUE_RESP_STRUCT \
   struct packed {                 \
     logic       accept;           \
     logic       writeback;        \
     logic [2:0] register_read;    \
+    logic       exc;              \
+    logic [5:0] exccode;          \
   }
 
 `define CV_X_IF_REGISTER_STRUCT(__xif_id_width) \
