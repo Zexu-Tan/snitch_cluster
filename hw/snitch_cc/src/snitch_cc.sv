@@ -816,7 +816,10 @@ module snitch_cc
     end
 
   end else begin : gen_no_spatz
-    assign cop_issue_ready[SpatzCopro] = '0;
+    // The absent Spatz port has decided not to accept: issue_ready = 1. With 0, cvxif_demux could
+    // never complete the handshake of an instruction that no coprocessor accepts (all_issue_ready),
+    // so the core would stall instead of raising an illegal-instruction exception.
+    assign cop_issue_ready[SpatzCopro] = 1'b1;
     assign cop_issue_resp[SpatzCopro] = '0;
     assign cop_register_ready[SpatzCopro] = '0;
     assign cop_result_valid[SpatzCopro] = '0;
