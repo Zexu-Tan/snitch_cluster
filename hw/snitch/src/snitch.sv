@@ -3071,10 +3071,25 @@ module snitch
         x_commit_o.commit_kill = 1'b0;
 
         // Since we cannot know whether a source register will be used or not by the processor,
-        // here we do not use valid_instr as in the other instructions
+        // here we do not use valid_instr as in the other instructions. The request is only
+        // offered when the instruction can also retire in the core in the handshake cycle;
+        // otherwise the core would stall after the handshake and offload the same instruction
+        // again with a new id:
+        // - rs1, rs2, rs3 ready, including the COPIFT f2i queue for x31 (operands_ready);
+        // - rd not busy in the scoreboard. The coprocessor's writeback flag cannot be used here
+        //   (it depends on this request), so rd is checked for every offloaded instruction;
+        //   cores with Spatz keep the previous behaviour because their rd field mostly names
+        //   vector or FP registers;
+        // - no interrupt to take: the trap is then taken on this instruction before it is
+        //   offloaded, and the instruction executes once after the trap returns.
         x_issue_valid_o        = inst_rsp_i.q_ready
                                 & inst_req_o.q_valid
-                                & ((itlb_valid & itlb_ready) | ~trans_active);
+                                & ((itlb_valid & itlb_ready) | ~trans_active)
+                                & (rs1_is_f2i ? f2i_rvalid : ~sb_q[rs1])
+                                & (rs2_is_f2i ? f2i_rvalid : ~sb_q[rs2])
+                                & ~sb_q[rs3]
+                                & (IsaCfg.RVV | ~sb_q[rd])
+                                & ~interrupt;
 
         // Same as x_issue_valid since registers are provided instantly
         x_register_valid_o     = x_issue_valid_o;
