@@ -43,9 +43,11 @@ dependencies:
   register_interface:
     git: https://github.com/pulp-platform/register_interface.git
     rev: common-cells-v2
+  # snitch-cassia: cvxif_demux forwards exc / exccode of a rejecting coprocessor (fork branch
+  # snitch-cassia, based on colluca/cvxif-demux-bender-ready = fad32c6).
   core_v_xif:
-    git: https://github.com/pulp-platform/core-v-xif.git
-    rev: colluca/cvxif-demux-bender-ready
+    git: https://github.com/Zexu-Tan/core-v-xif.git
+    rev: snitch-cassia
   FPnew:
     git: https://github.com/pulp-platform/cvfpu.git
     rev: bump-common-cells-v2
