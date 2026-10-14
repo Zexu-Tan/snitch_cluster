@@ -507,6 +507,17 @@ module snitch
   `FFLAR(xif_offload_counter_q, xif_offload_counter_q + 1,
          x_issue_ready_i & x_issue_valid_o, '0, clk_i, rst_i)
 
+  // Accepted CV-X-IF instructions whose result has not been received yet. Every accepted
+  // instruction returns exactly one result (CV-X-IF), so FENCE waits until this count is zero:
+  // a coprocessor that returns the result of a memory instruction after the access completes
+  // (e.g. Cassia) is then ordered with the core's own loads and stores.
+  logic [XifIdWidth:0] xif_inflight_q, xif_inflight_d;
+  assign xif_inflight_d = xif_inflight_q
+                        + (XifIdWidth+1)'(EnableXif & x_issue_valid_o & x_issue_ready_i
+                                          & x_issue_resp_i.accept)
+                        - (XifIdWidth+1)'(EnableXif & x_result_valid_i & x_result_ready_o);
+  `FFAR(xif_inflight_q, xif_inflight_d, '0, clk_i, rst_i)
+
   // ---------
   // L0 ITLB
   // ---------
@@ -1058,7 +1069,7 @@ module snitch
         end
       end
       FENCE: begin
-        fence_stall = valid_instr && !(lsu_empty && caq_empty);
+        fence_stall = valid_instr && !(lsu_empty && caq_empty && (xif_inflight_q == '0));
         write_rd = 1'b0;
       end
       FENCE_I: begin
