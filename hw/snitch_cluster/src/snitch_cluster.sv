@@ -96,6 +96,8 @@ module snitch_cluster
   parameter snitch_pkg::isa_cfg_t IsaCfg [NrCores] = '{default: '0},
   // Per-core enable of private IPU.
   parameter bit [NrCores-1:0] PrivateIpu    = '0,
+  // Per-core offload of the AME CSR instructions to the external CV-X-IF coprocessor.
+  parameter bit [NrCores-1:0] XifAmeCsr     = '0,
   /// # Core-global parameters
   /// FPU configuration.
   parameter fpnew_pkg::fpu_implementation_t FPUImplementation [NrCores] =
@@ -1147,6 +1149,7 @@ module snitch_cluster
       .dma_events_t (dma_events_t),
       .EnableXif (EnableXif),
       .XifIdWidth (XifIdWidth),
+      .XifAmeCsr (XifAmeCsr[i]),
       .x_issue_req_t (x_issue_req_t),
       .x_issue_resp_t (x_issue_resp_t),
       .x_register_t (x_register_t),

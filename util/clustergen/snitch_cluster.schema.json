@@ -669,6 +669,11 @@
                                             "description": "Whether the core should be equipped with its own, not a hive-shared, private IPU.",
                                             "default": false
                                         },
+                                        "xif_ame_csr": {
+                                            "type": "boolean",
+                                            "description": "Offload the Zicsr instructions on the AME CSRs (0x800, 0xCC0-0xCC5) to the external CV-X-IF coprocessor instead of executing them in the core. Requires enable_xif. CSR 0x800 (fmode) is then not accessible on this core.",
+                                            "default": false
+                                        },
                                         "num_int_outstanding_loads": {
                                             "type": "number",
                                             "description": "Number of outstanding integer loads. Determines the buffer size in the core's load/store unit.",

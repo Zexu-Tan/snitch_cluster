@@ -224,6 +224,7 @@ module snitch_cluster_wrapper
     .XifIdWidth               (XifIdWidth),
     .IsaCfg                   (IsaCfg),
     .PrivateIpu               (PrivateIpu),
+    .XifAmeCsr                (XifAmeCsr),
     .FPUImplementation        (FPUImplementation),
     .SnitchPMACfg             (SnitchPMACfg),
     .NumIntOutstandingLoads   (NumIntOutstandingLoads),

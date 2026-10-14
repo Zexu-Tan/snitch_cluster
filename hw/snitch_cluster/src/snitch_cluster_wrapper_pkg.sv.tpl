@@ -374,6 +374,7 @@ ${ssr_cfg(core, '{reg_idx}', '/*None*/ 0', ',')}\
   localparam bit                     VMSupport          = ${int(cfg['cluster']['vm_support'])};
   localparam bit                     EnableXif          = ${int(cfg['cluster']['enable_xif'])};
   localparam bit [NrCores-1:0]       PrivateIpu         = ${core_cfg_flat('private_ipu')};
+  localparam bit [NrCores-1:0]       XifAmeCsr          = ${core_cfg_flat('xif_ame_csr')};
   localparam int unsigned            NumSsrsMax         = ${cfg['cluster']['num_ssrs_max']};
   localparam snitch_cluster_pkg::topo_e Topology        = snitch_cluster_pkg::${cfg['cluster']['tcdm']['topology']};
   localparam int unsigned            Radix              = ${int(cfg['cluster']['tcdm']['radix'])};

@@ -27,6 +27,8 @@ Parameters:
   DebugSupport           - Enable debug support.
   EnableXif              - Enable CV-X-IF support.
   XifIdWidth             - ID width of the CV-X-IF interface.
+  XifAmeCsr              - Offload the Zicsr instructions on the AME CSRs (0x800, 0xCC0-0xCC5)
+                           to the CV-X-IF coprocessor instead of executing them in the core.
   NumIntOutstandingLoads - Number of outstanding loads.
   NumIntOutstandingMem   - Number of outstanding memory transactions.
   NumDTLBEntries         - Number of DTLB entries.
@@ -91,6 +93,7 @@ module snitch
   parameter bit          DebugSupport = 1,
   parameter bit          EnableXif  = 1,
   parameter int unsigned XifIdWidth = 4,
+  parameter bit          XifAmeCsr  = 0,
   parameter int unsigned NumIntOutstandingLoads = 0,
   parameter int unsigned NumIntOutstandingMem = 0,
   parameter int unsigned NumDTLBEntries = 0,
@@ -357,6 +360,8 @@ module snitch
   // -----
   logic [31:0] csr_rvalue;
   logic csr_en;
+  // Zicsr instruction on an AME CSR that is offloaded to CV-X-IF (XifAmeCsr).
+  logic xif_ame_csr;
   logic csr_dump;
   logic csr_stall_d, csr_stall_q;
 
@@ -660,6 +665,17 @@ module snitch
   assign rs1 = inst_rsp_i.data[15 + RegWidth - 1:15];
   assign rs2 = inst_rsp_i.data[20 + RegWidth - 1:20];
   assign rs3 = inst_rsp_i.data[27 + RegWidth - 1:27];
+
+  // AME CSRs (Cassia attached-matrix coprocessor): amestatus 0x800 and amenlen, ameudsz,
+  // amestype, ameown, amefflags, amexsat 0xCC0-0xCC5. With XifAmeCsr the core does not execute
+  // csrrw/csrrs/csrrc(i) on these addresses (0x800 is fmode otherwise); they are offloaded like
+  // any unsupported instruction and the coprocessor's result writes rd.
+  assign xif_ame_csr = EnableXif & XifAmeCsr
+                     & (inst_rsp_i.data[6:0] == 7'b1110011)
+                     & (inst_rsp_i.data[13:12] != 2'b00)
+                     & ((inst_rsp_i.data[31:20] == 12'h800)
+                        | ((inst_rsp_i.data[31:23] == 9'b1100_1100_0)
+                           & (inst_rsp_i.data[22:20] <= 3'd5)));
 
   always_comb begin
     unsupported_inst = 1'b0;
@@ -3014,6 +3030,12 @@ module snitch
         unsupported_inst = 1'b1;
       end
     endcase
+
+    // AME CSR instructions are executed by the CV-X-IF coprocessor: no core CSR access.
+    if (xif_ame_csr) begin
+      csr_en = 1'b0;
+      unsupported_inst = 1'b1;
+    end
 
     // If the CV-X-IF interface is enabled, we try offloading unsupported instructions to the
     // CV-X-IF coprocessors. Otherwise, unsupported instructions are illegal instructions.

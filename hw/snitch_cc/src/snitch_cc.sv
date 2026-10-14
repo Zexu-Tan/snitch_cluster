@@ -46,6 +46,8 @@ module snitch_cc
   // XIF parameters
   parameter bit          EnableXif          = 1,
   parameter int unsigned XifIdWidth         = 4,
+  /// Offload Zicsr instructions on the AME CSRs to the external CV-X-IF coprocessor.
+  parameter bit          XifAmeCsr          = 0,
   // XIF port types
   parameter type         x_issue_req_t      = logic,
   parameter type         x_issue_resp_t     = logic,
@@ -352,6 +354,7 @@ module snitch_cc
     .DebugSupport          (DebugSupport),
     .EnableXif             (EnableXif | IsaCfg.RVV),
     .XifIdWidth            (XifIdWidth),
+    .XifAmeCsr             (XifAmeCsr),
     .NumIntOutstandingLoads(NumIntOutstandingLoads),
     .NumIntOutstandingMem  (NumIntOutstandingMem),
     .NumDTLBEntries        (NumDTLBEntries),
