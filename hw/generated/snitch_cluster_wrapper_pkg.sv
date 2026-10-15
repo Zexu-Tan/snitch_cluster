@@ -1356,6 +1356,7 @@ package snitch_cluster_wrapper_pkg;
   localparam bit                     VMSupport          = 0;
   localparam bit                     EnableXif          = 0;
   localparam bit [NrCores-1:0]       PrivateIpu         = 9'b000000000;
+  localparam bit [NrCores-1:0]       XifAmeCsr          = 9'b000000000;
   localparam int unsigned            NumSsrsMax         = 3;
   localparam snitch_cluster_pkg::topo_e Topology        = snitch_cluster_pkg::LogarithmicInterconnect;
   localparam int unsigned            Radix              = 2;
