@@ -253,6 +253,8 @@ module snitch
 
   logic [RegWidth-1:0] rd, rs1, rs2, rs3;
   logic stall, lsu_stall, acc_stall, nonacc_stall, fence_stall, x_stall;
+  // CV-X-IF: the offered instruction waits for its rd (see the issue gating in the decoder).
+  logic x_rd_wait;
   // Register connections
   logic [NumRfReadPorts-1:0][RegWidth-1:0] gpr_raddr;
   logic [NumRfReadPorts-1:0][31:0]         gpr_rdata;
@@ -620,9 +622,10 @@ module snitch
                         ((is_fp_store | is_fp_load) ? (trans_ready & caq_qready) : 1'b1);
   // the accelerator interface stalled us. Also wait for CAQ if this is an FP load/store.
   assign acc_stall = acc_req_o.q_valid & ~acc_rsp_i.q_ready | (caq_ena & ~caq_qready);
-  // the coprocessor is not ready yet
+  // the coprocessor is not ready yet, or the instruction to offload waits for its rd
   assign x_stall = EnableXif & ((x_issue_valid_o & ~x_issue_ready_i)
-                                 | (x_register_valid_o & ~x_register_ready_i));
+                                 | (x_register_valid_o & ~x_register_ready_i)
+                                 | x_rd_wait);
   // the LSU Interface didn't accept our request yet
   assign lsu_stall = lsu_tlb_qvalid & ~lsu_tlb_qready;
   // Stall the stage if we either didn't get a valid instruction, the LSU is not ready
@@ -707,6 +710,7 @@ module snitch
     x_issue_valid_o    = 1'b0;
     x_register_valid_o = 1'b0;
     x_commit_valid_o   = 1'b0;
+    x_rd_wait          = 1'b0;
 
     flush_i_valid_o = 1'b0;
     tlb_flush = 1'b0;
@@ -3096,13 +3100,19 @@ module snitch
         //   vector or FP registers;
         // - no interrupt to take: the trap is then taken on this instruction before it is
         //   offloaded, and the instruction executes once after the trap returns.
+        // While the request is held back the core must not retire the instruction. Operands
+        // not ready and the instruction fetch clear valid_instr (stall), an interrupt takes the
+        // trap; a busy rd does neither (dst_ready only checks rd once the coprocessor's
+        // writeback flag is known, i.e. in the handshake cycle), so x_rd_wait stalls the core
+        // until the rd write in flight (e.g. a load) has retired.
+        x_rd_wait              = ~IsaCfg.RVV & sb_q[rd];
         x_issue_valid_o        = inst_rsp_i.q_ready
                                 & inst_req_o.q_valid
                                 & ((itlb_valid & itlb_ready) | ~trans_active)
                                 & (rs1_is_f2i ? f2i_rvalid : ~sb_q[rs1])
                                 & (rs2_is_f2i ? f2i_rvalid : ~sb_q[rs2])
                                 & ~sb_q[rs3]
-                                & (IsaCfg.RVV | ~sb_q[rd])
+                                & ~x_rd_wait
                                 & ~interrupt;
 
         // Same as x_issue_valid since registers are provided instantly
